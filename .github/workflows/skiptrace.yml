@@ -1,0 +1,28 @@
+name: Skip trace (manual)
+
+on:
+  workflow_dispatch: {}
+
+jobs:
+  skiptrace:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out the code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Skip trace the leads you flagged
+        env:
+          SUPABASE_URL:         ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          TRACERFY_API_KEY:     ${{ secrets.TRACERFY_API_KEY }}
+          SKIP_TRACE_MAX:       ${{ vars.SKIP_TRACE_MAX || '200' }}
+        run: python skip_trace_runner.py
