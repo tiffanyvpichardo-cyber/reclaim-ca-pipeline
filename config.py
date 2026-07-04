@@ -14,6 +14,10 @@ load_dotenv()
 
 # ── API Keys ────────────────────────────────────────────────────────────────
 BATCHDATA_API_KEY   = os.getenv("BATCHDATA_API_KEY", "")
+# Skip-trace provider key (Tracerfy). Falls back to legacy names.
+SKIPTRACE_API_KEY   = (os.getenv("TRACERFY_API_KEY", "")
+                       or os.getenv("SKIPTRACE_API_KEY", "")
+                       or os.getenv("BATCHDATA_API_KEY", ""))
 POSTGRID_API_KEY    = os.getenv("POSTGRID_API_KEY", "")
 ANTHROPIC_API_KEY   = os.getenv("ANTHROPIC_API_KEY", "")
 
