@@ -29,14 +29,30 @@ from config import SKIPTRACE_API_KEY
 BASE = os.getenv("TRACERFY_BASE_URL", "https://www.tracerfy.com/v1/api").rstrip("/")
 LOOKUP_PATH = os.getenv("TRACERFY_LOOKUP_PATH", "/trace/lookup/")
 LOOKUP_URL = f"{BASE}{LOOKUP_PATH}"
-AUTH_SCHEME = os.getenv("TRACERFY_AUTH_SCHEME", "Api-Key")   # or "Bearer"
+AUTH_HEADER = os.getenv("TRACERFY_AUTH_HEADER", "Authorization")
+AUTH_SCHEME = os.getenv("TRACERFY_AUTH_SCHEME", "Bearer")   # Tracerfy docs: Authorization: Bearer <token>
+API_KEY = (SKIPTRACE_API_KEY or "").strip()   # trim stray spaces/newlines from pasting
 
 _raw_dumped = 0
+_auth_diag_done = False
 
 
 def _headers():
-    return {"Authorization": f"{AUTH_SCHEME} {SKIPTRACE_API_KEY}",
-            "Content-Type": "application/json"}
+    value = f"{AUTH_SCHEME} {API_KEY}".strip() if AUTH_SCHEME else API_KEY
+    return {AUTH_HEADER: value, "Content-Type": "application/json"}
+
+
+def _auth_diagnostic():
+    """Print once: what auth we're sending (never the key itself)."""
+    global _auth_diag_done
+    if _auth_diag_done:
+        return
+    _auth_diag_done = True
+    raw = SKIPTRACE_API_KEY or ""
+    ws = "  (trimmed surrounding whitespace!)" if raw != raw.strip() else ""
+    print(f"  auth check -> header='{AUTH_HEADER}', scheme='{AUTH_SCHEME}', key_length={len(API_KEY)}{ws}")
+    if not API_KEY:
+        print("  !! API key is EMPTY after trimming - check the TRACERFY_API_KEY secret.")
 
 
 def _persons(data):
@@ -104,7 +120,8 @@ def _mailing(person):
 def skip_trace_lead(lead: dict):
     """One synchronous Tracerfy lookup. Returns enriched contact dict or None."""
     global _raw_dumped
-    if not SKIPTRACE_API_KEY:
+    _auth_diagnostic()
+    if not API_KEY:
         print("  TRACERFY_API_KEY not set - skip trace skipped")
         return None
 
@@ -115,7 +132,7 @@ def skip_trace_lead(lead: dict):
         "address": lead.get("address", ""),
         "city": lead.get("city", ""),
         "state": lead.get("state", "") or lead.get("property_state", ""),
-        "zip_code": lead.get("zip", ""),
+        "zip": lead.get("zip", ""),
     }
 
     try:
@@ -169,7 +186,7 @@ def skip_trace_lead(lead: dict):
 
 def skip_trace_batch(leads: list) -> list:
     """Sync endpoint is one-at-a-time, so loop. Returns [(lead, enriched|None)]."""
-    if not SKIPTRACE_API_KEY:
+    if not API_KEY:
         print("  TRACERFY_API_KEY not set")
         return [(l, None) for l in leads]
     paired = [(lead, skip_trace_lead(lead)) for lead in leads]
